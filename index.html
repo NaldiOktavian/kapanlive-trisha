@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Kapan Live Trisha? </title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<main class="app">
+  <div class="desktop-title">
+    <h1>TRISHA EVERYWHERE🌻</h1>
+    <span>🌻 Matahariku Merge Game</span>
+  </div>
+
+  <header class="hud">
+    <div class="score-card" id="scoreCard">
+      <p>SCORE</p>
+      <h2 id="score">0</h2>
+    </div>
+    <button id="restartBtn">Restart</button>
+    <div class="score-card">
+      <p>BEST</p>
+      <h2 id="bestScore">0</h2>
+    </div>
+  </header>
+
+  <section class="desktop-layout">
+    <aside class="side-panel left-panel">
+      <h2>TRISHA<br>BLOOM</h2>
+      <p>Panggil Trisha sampai dia bersinar terang🌻</p>
+      <div class="info-box">
+        <h3>Cara Main</h3>
+        <p>Tap / klik untuk summon Trisha.</p>
+        <p>jangan sampai kamu melewati batas.</p>
+      </div>
+    </aside>
+
+    <section class="game-wrap" id="gameWrap">
+      <canvas id="game"></canvas>
+
+      <div class="aim-line" id="aimLine"></div>
+      <div class="warning-line"></div>
+
+      <div class="start-screen" id="startScreen">
+        <h1>TRISHA BLOOM 🌻</h1>
+        <p>karena trisha ga kunjung-kunjung live, jadi aku bikin game ini supaya trisha live lagi.. sambil nunggu trisha nya live, coba mainin 🌻</p>
+        <button id="startBtn">Mulai Main</button>
+      </div>
+
+      <div class="game-over" id="gameOver">
+        <h1>Game Over</h1>
+        <p id="finalScore">Score: 0</p>
+        <button id="playAgainBtn">Main Lagi</button>
+      </div>
+    </section>
+
+    <!-- ===== MOBILE BOTTOM PANEL (compact) ===== -->
+    <section class="mobile-bottom-panel">
+      <div class="mobile-bottom-row">
+        <div class="mobile-current">
+          <div class="mobile-current-thumb">
+            <img id="mobileCurrentImg" src="assets/img/tr1.png" alt="">
+          </div>
+          <strong id="mobileCurrentName">V1</strong>
+        </div>
+
+        <div class="mobile-evo-bar">
+          <div class="evo-dot active" data-mlevel="0"><img src="assets/img/tr1.png" alt=""><span>1</span></div>
+          <div class="evo-dot" data-mlevel="1"><img src="assets/img/tr2.png" alt=""><span>2</span></div>
+          <div class="evo-dot" data-mlevel="2"><img src="assets/img/tr3.png" alt=""><span>3</span></div>
+          <div class="evo-dot" data-mlevel="3"><img src="assets/img/tr4.png" alt=""><span>4</span></div>
+          <div class="evo-dot" data-mlevel="4"><img src="assets/img/tr5.png" alt=""><span>5</span></div>
+          <div class="evo-dot" data-mlevel="5"><img src="assets/img/tr6.png" alt=""><span>6</span></div>
+          <div class="evo-dot" data-mlevel="6"><img src="assets/img/tr7.png" alt=""><span>7</span></div>
+        </div>
+
+        <div class="mobile-controls">
+          <button id="mobilePauseBtn">Pause</button>
+          <button id="mobileMusicBtn">BGM</button>
+        </div>
+      </div>
+
+      <div class="mobile-merge-log" id="mobileMergeLog">
+        🌻 Panggil Trisha sampai menjadi Matahariku
+      </div>
+
+      <div class="mobile-caption">
+        semakin banyak poin, semakin besar peluang trisha bakalan live ✨
+      </div>
+    </section>
+
+    <!-- ===== DESKTOP RIGHT PANEL ===== -->
+    <aside class="side-panel right-panel">
+      <div class="next-card">
+        <div class="next-thumb">
+          <img id="sideCurrentImg" src="assets/img/tr1.png" alt="Current Trisha">
+        </div>
+        <div>
+          <small>sekarang</small>
+          <strong id="sideCurrentName">Trisha V1</strong>
+        </div>
+      </div>
+
+      <div class="side-section">
+        <h3>Evolution</h3>
+        <div class="evo-list">
+          <div class="preview-item locked" data-level="0">
+            <span class="evo-color pink"></span>
+            <p>Trisha V1</p><b>1</b>
+            <img src="assets/img/tr1.png" alt="">
+          </div>
+          <div class="preview-item locked" data-level="1">
+            <span class="evo-color yellow"></span>
+            <p>Trisha V2</p><b>2</b>
+            <img src="assets/img/tr2.png" alt="">
+          </div>
+          <div class="preview-item locked" data-level="2">
+            <span class="evo-color green"></span>
+            <p>Trisha V3</p><b>3</b>
+            <img src="assets/img/tr3.png" alt="">
+          </div>
+          <div class="preview-item locked" data-level="3">
+            <span class="evo-color blue"></span>
+            <p>Trisha V4</p><b>4</b>
+            <img src="assets/img/tr4.png" alt="">
+          </div>
+          <div class="preview-item locked" data-level="4">
+            <span class="evo-color purple"></span>
+            <p>Trisha V5</p><b>5</b>
+            <img src="assets/img/tr5.png" alt="">
+          </div>
+          <div class="preview-item locked" data-level="5">
+            <span class="evo-color brown"></span>
+            <p>Trisha V6</p><b>6</b>
+            <img src="assets/img/tr6.png" alt="">
+          </div>
+          <div class="preview-item locked" data-level="6">
+            <span class="evo-color teal"></span>
+            <p>Trisha V7</p><b>7</b>
+            <img src="assets/img/tr7.png" alt="">
+          </div>
+        </div>
+      </div>
+
+      <div class="side-controls">
+        <button id="sideResetBtn">Reset</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="musicBtn">BGM ON</button>
+      </div>
+
+      <div class="merge-log" id="mergeLog">
+        🌻 Panggil Trisha sampai menjadi Matahariku
+      </div>
+    </aside>
+  </section>
+</main>
+
+  <button id="previewBtn" class="mobile-preview-btn">🌻 Preview</button>
+
+  <div id="previewModal" class="preview-modal">
+    <div class="preview-content">
+      <div class="preview-header">
+        <h3>Trisha Collection</h3>
+        <button id="closePreview">✕</button>
+      </div>
+      <div id="previewGrid" class="preview-grid"></div>
+      <div class="collection-footer">
+        Collection: <span id="collectionCount">0/7</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="matter.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
