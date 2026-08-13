@@ -20,6 +20,7 @@ html, body {
 .app {
   width: 100vw;
   height: 100dvh;
+  overflow: hidden;
   max-width: 430px;
   margin: 0 auto;
   padding: 8px;
@@ -245,7 +246,7 @@ button:active {
   transition: transform 0.05s ease;
 }
 
-/* ===================== MOBILE CAPTION (selalu statis) ===================== */
+/* ===================== MOBILE CAPTION ===================== */
 
 .mobile-caption {
   background: linear-gradient(135deg, rgba(255,255,255,.55), rgba(255,230,242,.55));
@@ -631,23 +632,6 @@ button:active {
   color: #7d143d;
 }
 
-/* ===================== PLAYER COUNT ===================== */
-.lb-player-count {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 2px dashed #ffccdd;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 900;
-  color: #a04070;
-  animation: captionBlink 3s ease-in-out infinite;
-}
-
-.lb-player-count span {
-  color: #ef3d8c;
-  font-size: 14px;
-}
-
 /* ===========================================================
    DESKTOP BREAKPOINT (>= 900px)
 =========================================================== */
@@ -657,6 +641,8 @@ button:active {
   .app {
     max-width: 1040px;
     padding: 8px 10px;
+    height: 100vh;
+    height: 100dvh;
   }
 
   .mobile-top-panel {
@@ -673,6 +659,7 @@ button:active {
     align-items: flex-end;
     gap: 12px;
     margin-bottom: 8px;
+    flex-shrink: 0;
   }
 
   .desktop-title h1 {
@@ -693,6 +680,7 @@ button:active {
     width: 560px;
     height: 58px;
     margin: 0 0 10px;
+    flex-shrink: 0;
   }
 
   .score-card {
@@ -713,21 +701,18 @@ button:active {
   .desktop-layout {
     flex: 1;
     display: grid;
-    grid-template-columns: 680px 240px;
+    grid-template-columns: 1fr 240px;
     gap: 18px;
-    justify-content: center;
-    align-items: stretch;
     min-height: 0;
+    overflow: hidden;
   }
 
   .game-wrap {
-    width: 680px;
-    height: calc(100dvh - 100px);
-    max-height: none;
-    aspect-ratio: auto;
-    flex: none;
+    width: 100%;
+    min-height: 0;
     border-radius: 26px;
     border-width: 4px;
+    overflow: hidden;
     box-shadow:
       0 8px 0 #ec6ca4,
       0 0 0 5px #ffb7d6;
@@ -791,7 +776,6 @@ button:active {
 
   .right-panel {
     width: 240px;
-    height: calc(100dvh - 100px);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -800,7 +784,9 @@ button:active {
     background: rgba(255, 255, 255, 0.58);
     border: 3px solid rgba(255,255,255,.9);
     box-shadow: 0 7px 0 #ec6ca4;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
   }
 
   .next-card,
@@ -812,6 +798,7 @@ button:active {
     border: 2px solid #ff9bc7;
     border-radius: 14px;
     padding: 10px;
+    flex-shrink: 0;
   }
 
   .next-card {

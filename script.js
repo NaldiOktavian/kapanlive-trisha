@@ -42,8 +42,6 @@ const submitScoreBtn  = document.getElementById("submitScoreBtn");
 const scoreSubmitWrap = document.getElementById("scoreSubmit");
 const submitMsg       = document.getElementById("submitMsg");
 
-const totalPlayersEl  = document.getElementById("totalPlayers");
-
 /* ============================================================
    FIREBASE CONFIG
 ============================================================ */
@@ -75,13 +73,11 @@ function initFirebase() {
     if (scoreSubmitWrap) scoreSubmitWrap.classList.remove("hidden");
 
     refreshLeaderboard();
-    refreshPlayerCount();
   } catch (e) {
     console.warn("Firebase init gagal:", e);
   }
 }
 
-/* === SUBMIT SKOR === */
 async function submitScoreToFirebase() {
   if (!firebaseReady || !db) return;
   const name = (playerNameInput.value.trim() || "Anonymous").slice(0, 15);
@@ -99,12 +95,9 @@ async function submitScoreToFirebase() {
       timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    await incrementPlayerCount();
-
     submitScoreBtn.textContent = "Terkirim ✓";
     if (submitMsg) submitMsg.textContent = "Skor berhasil dikirim!";
     await refreshLeaderboard();
-    await refreshPlayerCount();
   } catch (e) {
     console.warn("Submit gagal:", e);
     submitScoreBtn.textContent = "Gagal, coba lagi";
@@ -113,7 +106,6 @@ async function submitScoreToFirebase() {
   }
 }
 
-/* === LEADERBOARD TOP 5 === */
 async function refreshLeaderboard() {
   if (!firebaseReady || !db) return;
   try {
@@ -143,37 +135,6 @@ function renderLeaderboard(entries) {
       <span class="lb-score">${Number(entry.score).toLocaleString()}</span>
     </div>
   `).join("");
-}
-
-/* === PLAYER COUNT === */
-async function incrementPlayerCount() {
-  if (!firebaseReady || !db) return;
-  try {
-    const ref = db.collection("stats").doc("players");
-    await db.runTransaction(async (transaction) => {
-      const doc = await transaction.get(ref);
-      if (!doc.exists) {
-        transaction.set(ref, { count: 1 });
-      } else {
-        transaction.update(ref, { count: firebase.firestore.FieldValue.increment(1) });
-      }
-    });
-  } catch (e) {
-    console.warn("Gagal update player count:", e);
-  }
-}
-
-async function refreshPlayerCount() {
-  if (!firebaseReady || !db) return;
-  try {
-    const doc = await db.collection("stats").doc("players").get();
-    const count = doc.exists ? (doc.data().count || 0) : 0;
-    if (totalPlayersEl) {
-      totalPlayersEl.textContent = count.toLocaleString();
-    }
-  } catch (e) {
-    console.warn("Gagal load player count:", e);
-  }
 }
 
 function escapeHtml(text) {
@@ -398,7 +359,6 @@ function playTrishaSfx(level) {
 
 preloadSfx();
 
-/* === GANBATTENE SFX === */
 const ganbatteneAudio = new Audio();
 ganbatteneAudio.src = "assets/audio/ganbattene.mp3";
 ganbatteneAudio.preload = "auto";
@@ -754,20 +714,31 @@ function drawCelebration() {
 
 function drawDropGhost() {
   if (!isPlaying || isGameOver || !canDrop) return;
+  if (!loadedImages[currentLevel]) return;
+
   const ctx  = render.context;
   const data = levels[currentLevel];
   const scaledRadius = data.radius * sizeScale;
+  const scaledHeight = data.visualHeight * sizeScale;
+  const img = loadedImages[currentLevel];
+  const imgScale = scaledHeight / img.naturalHeight;
+  const imgW = img.naturalWidth * imgScale;
+  const imgH = scaledHeight;
+
   ctx.save();
-  ctx.globalAlpha = 0.2;
+
+  ctx.globalAlpha = 0.3;
+  ctx.drawImage(img, dropX - imgW / 2, 50 - imgH / 2, imgW, imgH);
+
+  ctx.globalAlpha = 0.25;
   ctx.beginPath();
   ctx.arc(dropX, 50, scaledRadius, 0, Math.PI * 2);
-  ctx.fillStyle = MERGE_COLORS[currentLevel];
-  ctx.fill();
   ctx.setLineDash([4, 4]);
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.setLineDash([]);
+
   ctx.restore();
 }
 
@@ -812,7 +783,6 @@ function updateShake() {
    GAME OBJECTS
 ============================================================ */
 
-/* Drop SELALU V1/V2/V3 — player harus build up dari bawah */
 function randomStartLevel() {
   return Math.floor(Math.random() * 3);
 }
@@ -862,9 +832,7 @@ function dropTrisha() {
 }
 
 /* ============================================================
-   COLLISION & MERGE — ENDLESS MODE
-   V7 adalah final form — tidak bisa di-merge atau di-dissolve.
-   V7 numpuk di board, bikin game makin susah.
+   COLLISION & MERGE
 ============================================================ */
 
 function handleCollision(event) {
@@ -875,7 +843,7 @@ function handleCollision(event) {
     if (a.level !== b.level) continue;
     if (a.merged || b.merged) continue;
     const nextLvl = a.level + 1;
-    if (nextLvl >= levels.length) continue; // V7+V7 diabaikan, V7 adalah final form
+    if (nextLvl >= levels.length) continue;
     a.merged = true;
     b.merged = true;
     const x = (a.position.x + b.position.x) / 2;
@@ -913,7 +881,6 @@ function processMerges() {
       bestEl.textContent = bestScore;
     }
 
-    /* V7 pertama kali tercipta */
     if (mergedLevel === 6) {
       setTimeout(() => { playTrishaSfx(6); }, 800);
       celebrationText = {
@@ -1087,7 +1054,6 @@ function restartGame() {
   if (mobileMergeLog) mobileMergeLog.textContent = "🌻 Panggil Trisha sampai menjadi Matahariku";
 
   refreshLeaderboard();
-  refreshPlayerCount();
 }
 
 /* ============================================================
