@@ -31,9 +31,158 @@ const mergeLog        = document.getElementById("mergeLog");
 
 const mobileCurrentImg  = document.getElementById("mobileCurrentImg");
 const mobileCurrentName = document.getElementById("mobileCurrentName");
+const mobileNextImg     = document.getElementById("mobileNextImg");
+const mobileNextName    = document.getElementById("mobileNextName");
 const mobilePauseBtn    = document.getElementById("mobilePauseBtn");
 const mobileMusicBtn    = document.getElementById("mobileMusicBtn");
 const mobileMergeLog    = document.getElementById("mobileMergeLog");
+
+const playerNameInput = document.getElementById("playerName");
+const submitScoreBtn  = document.getElementById("submitScoreBtn");
+const scoreSubmitWrap = document.getElementById("scoreSubmit");
+const submitMsg       = document.getElementById("submitMsg");
+
+const totalPlayersEl  = document.getElementById("totalPlayers");
+
+/* ============================================================
+   FIREBASE CONFIG
+============================================================ */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD9RczAxYVjPRzcCyJx1DSwlPk2znTk6K8",
+  authDomain: "trisha-game.firebaseapp.com",
+  projectId: "trisha-game",
+  storageBucket: "trisha-game.firebasestorage.app",
+  messagingSenderId: "720492568681",
+  appId: "1:720492568681:web:67bdb51d749a048b0342f8"
+};
+
+let db = null;
+let firebaseReady = false;
+
+function initFirebase() {
+  try {
+    if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "") {
+      console.log("Firebase belum dikonfigurasi. Leaderboard nonaktif.");
+      return;
+    }
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    firebaseReady = true;
+
+    const lb = document.getElementById("leaderboard");
+    if (lb) lb.classList.remove("hidden");
+    if (scoreSubmitWrap) scoreSubmitWrap.classList.remove("hidden");
+
+    refreshLeaderboard();
+    refreshPlayerCount();
+  } catch (e) {
+    console.warn("Firebase init gagal:", e);
+  }
+}
+
+/* === SUBMIT SKOR === */
+async function submitScoreToFirebase() {
+  if (!firebaseReady || !db) return;
+  const name = (playerNameInput.value.trim() || "Anonymous").slice(0, 15);
+  playerNameInput.value = name;
+  localStorage.setItem("trishaPlayerName", name);
+
+  try {
+    submitScoreBtn.disabled = true;
+    submitScoreBtn.textContent = "Mengirim...";
+    if (submitMsg) submitMsg.textContent = "";
+
+    await db.collection("leaderboard").add({
+      name: name,
+      score: score,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    await incrementPlayerCount();
+
+    submitScoreBtn.textContent = "Terkirim ✓";
+    if (submitMsg) submitMsg.textContent = "Skor berhasil dikirim!";
+    await refreshLeaderboard();
+    await refreshPlayerCount();
+  } catch (e) {
+    console.warn("Submit gagal:", e);
+    submitScoreBtn.textContent = "Gagal, coba lagi";
+    if (submitMsg) submitMsg.textContent = "";
+    submitScoreBtn.disabled = false;
+  }
+}
+
+/* === LEADERBOARD TOP 5 === */
+async function refreshLeaderboard() {
+  if (!firebaseReady || !db) return;
+  try {
+    const snapshot = await db.collection("leaderboard")
+      .orderBy("score", "desc")
+      .limit(5)
+      .get();
+    const entries = snapshot.docs.map((doc) => doc.data());
+    renderLeaderboard(entries);
+  } catch (e) {
+    console.warn("Gagal load leaderboard:", e);
+  }
+}
+
+function renderLeaderboard(entries) {
+  const lbList = document.getElementById("lbList");
+  if (!lbList) return;
+  if (!entries || entries.length === 0) {
+    lbList.innerHTML = '<div class="lb-empty">Belum ada skor</div>';
+    return;
+  }
+  const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"];
+  lbList.innerHTML = entries.map((entry, i) => `
+    <div class="lb-entry">
+      <span class="lb-rank">${medals[i]}</span>
+      <span class="lb-name">${escapeHtml(entry.name)}</span>
+      <span class="lb-score">${Number(entry.score).toLocaleString()}</span>
+    </div>
+  `).join("");
+}
+
+/* === PLAYER COUNT === */
+async function incrementPlayerCount() {
+  if (!firebaseReady || !db) return;
+  try {
+    const ref = db.collection("stats").doc("players");
+    await db.runTransaction(async (transaction) => {
+      const doc = await transaction.get(ref);
+      if (!doc.exists) {
+        transaction.set(ref, { count: 1 });
+      } else {
+        transaction.update(ref, { count: firebase.firestore.FieldValue.increment(1) });
+      }
+    });
+  } catch (e) {
+    console.warn("Gagal update player count:", e);
+  }
+}
+
+async function refreshPlayerCount() {
+  if (!firebaseReady || !db) return;
+  try {
+    const doc = await db.collection("stats").doc("players").get();
+    const count = doc.exists ? (doc.data().count || 0) : 0;
+    if (totalPlayersEl) {
+      totalPlayersEl.textContent = count.toLocaleString();
+    }
+  } catch (e) {
+    console.warn("Gagal load player count:", e);
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+initFirebase();
 
 /* ============================================================
    CONSTANTS
@@ -91,6 +240,7 @@ let isPaused      = false;
 let canDrop       = true;
 let dropX         = 0;
 let currentLevel  = 0;
+let nextLevel     = 0;
 let celebrationText = null;
 let dangerStartTime = null;
 let imagesReady   = false;
@@ -101,6 +251,11 @@ let highestReached = 0;
 let unlockedLevels = loadUnlockedLevels();
 
 bestEl.textContent = bestScore;
+
+if (playerNameInput) {
+  const savedName = localStorage.getItem("trishaPlayerName");
+  if (savedName) playerNameInput.value = savedName;
+}
 
 /* ============================================================
    AUDIO SYSTEM
@@ -177,8 +332,6 @@ function playGameOverSfx() {
   });
 }
 
-/* ——— BGM (custom MP3, loop) ——— */
-
 const bgmAudio    = new Audio();
 bgmAudio.src      = "assets/audio/fsj_piano.mp3";
 bgmAudio.loop     = true;
@@ -195,8 +348,6 @@ function stopBGM() {
   bgmPlaying = false;
   bgmAudio.pause();
 }
-
-/* ——— TRISHA VOICE SFX (MP3) ——— */
 
 const sfxFiles = [
   "assets/audio/trisha1.mp3",
@@ -237,7 +388,7 @@ let lastSfxTime = 0;
 function playTrishaSfx(level) {
   if (!sfxReady || !sfxAudios[level]) return;
   const now = Date.now();
-  if (now - lastSfxTime < 300) return;   // ← UBAH: dulu 600, sekarang 300
+  if (now - lastSfxTime < 300) return;
   lastSfxTime = now;
   const clone = sfxAudios[level].cloneNode();
   clone.volume = 0.7 + level * 0.04;
@@ -246,6 +397,19 @@ function playTrishaSfx(level) {
 }
 
 preloadSfx();
+
+/* === GANBATTENE SFX === */
+const ganbatteneAudio = new Audio();
+ganbatteneAudio.src = "assets/audio/ganbattene.mp3";
+ganbatteneAudio.preload = "auto";
+ganbatteneAudio.volume = 0.8;
+
+function playGanbattene() {
+  const clone = ganbatteneAudio.cloneNode();
+  clone.volume = 0.8;
+  clone.currentTime = 0;
+  clone.play().catch(() => {});
+}
 
 /* ============================================================
    PERSISTENCE
@@ -310,6 +474,7 @@ function loadGameState() {
 
 function restoreGame(state) {
   initAudio();
+  playGanbattene();
   startScreen.style.display    = "none";
   gameOverScreen.style.display = "none";
 
@@ -318,6 +483,7 @@ function restoreGame(state) {
   score = state.score;
   scoreEl.textContent = score;
   currentLevel   = state.currentLevel;
+  nextLevel      = randomStartLevel();
   highestReached = state.highestReached;
 
   state.bodies.forEach((bd) => {
@@ -326,10 +492,9 @@ function restoreGame(state) {
     Composite.add(world, body);
   });
 
-  /* ======== FIX #1: Mulai dalam keadaan paused ======== */
   Runner.stop(runner);
   isPaused   = true;
-  isPlaying  = false;   // sebelumnya: true  → bikin dropTrisha nyangkut
+  isPlaying  = false;
   isGameOver = false;
   canDrop    = true;
   dangerStartTime = null;
@@ -408,6 +573,10 @@ function updateSideCurrent() {
     mobileCurrentImg.src = assets[currentLevel];
     mobileCurrentName.textContent = `V${currentLevel + 1}`;
   }
+  if (mobileNextImg && mobileNextName) {
+    mobileNextImg.src = assets[nextLevel];
+    mobileNextName.textContent = `V${nextLevel + 1}`;
+  }
 }
 
 function updateMergeLog(level) {
@@ -463,7 +632,6 @@ function resizeCanvas() {
   gameWidth  = wrap.clientWidth;
   gameHeight = wrap.clientHeight;
 
-  /* ======== FIX #2: Fallback kalau dimensi 0 ======== */
   if (gameWidth < 50 || gameHeight < 50) {
     gameWidth  = 400;
     gameHeight = 600;
@@ -571,8 +739,8 @@ function drawCelebration() {
   const ctx = render.context;
   celebrationText.timer++;
   ctx.save();
-  ctx.globalAlpha = celebrationText.alpha;
-  ctx.font = "bold 32px Arial";
+  ctx.globalAlpha = Math.max(0, celebrationText.alpha);
+  ctx.font = `bold ${celebrationText.fontSize || 32}px Arial`;
   ctx.textAlign = "center";
   ctx.lineWidth = 6;
   ctx.strokeStyle = "#ef3d8c";
@@ -580,7 +748,7 @@ function drawCelebration() {
   ctx.fillStyle = "#fff";
   ctx.fillText(celebrationText.text, gameWidth / 2, gameHeight / 2);
   ctx.restore();
-  if (celebrationText.timer > celebrationText.hold) celebrationText.alpha -= 0.01;
+  if (celebrationText.timer > celebrationText.hold) celebrationText.alpha -= 0.015;
   if (celebrationText.alpha <= 0) celebrationText = null;
 }
 
@@ -644,6 +812,7 @@ function updateShake() {
    GAME OBJECTS
 ============================================================ */
 
+/* Drop SELALU V1/V2/V3 — player harus build up dari bawah */
 function randomStartLevel() {
   return Math.floor(Math.random() * 3);
 }
@@ -675,7 +844,6 @@ function createTrisha(x, y, level) {
   return body;
 }
 
-/* ======== FIX #3: dropTrisha sekarang cek isPaused ======== */
 function dropTrisha() {
   if (!isPlaying || isGameOver || !canDrop || isPaused) return;
   canDrop = false;
@@ -684,14 +852,19 @@ function dropTrisha() {
   const body  = createTrisha(safeX, 50, currentLevel);
   Composite.add(world, body);
   playDropSfx();
-  currentLevel = randomStartLevel();
+
+  currentLevel = nextLevel;
+  nextLevel = randomStartLevel();
+
   updateSideCurrent();
   updateMobileEvoBar();
   setTimeout(() => { canDrop = true; }, 500);
 }
 
 /* ============================================================
-   COLLISION & MERGE
+   COLLISION & MERGE — ENDLESS MODE
+   V7 adalah final form — tidak bisa di-merge atau di-dissolve.
+   V7 numpuk di board, bikin game makin susah.
 ============================================================ */
 
 function handleCollision(event) {
@@ -701,31 +874,33 @@ function handleCollision(event) {
     if (a.label !== "trisha" || b.label !== "trisha") continue;
     if (a.level !== b.level) continue;
     if (a.merged || b.merged) continue;
-    const nextLevel = a.level + 1;
-    if (nextLevel >= levels.length) continue;
+    const nextLvl = a.level + 1;
+    if (nextLvl >= levels.length) continue; // V7+V7 diabaikan, V7 adalah final form
     a.merged = true;
     b.merged = true;
     const x = (a.position.x + b.position.x) / 2;
     const y = (a.position.y + b.position.y) / 2;
-    mergeQueue.push({ a, b, x, y, nextLevel });
+    mergeQueue.push({ a, b, x, y, nextLevel: nextLvl });
   }
 }
 
 function processMerges() {
   while (mergeQueue.length > 0) {
-    const { a, b, x, y, nextLevel } = mergeQueue.shift();
+    const { a, b, x, y, nextLevel: mergedLevel } = mergeQueue.shift();
     Composite.remove(world, a);
     Composite.remove(world, b);
-    const merged = createTrisha(x, y, nextLevel);
+
+    const merged = createTrisha(x, y, mergedLevel);
     Composite.add(world, merged);
-    const points = levels[nextLevel].score;
-    createMergeEffect(x, y, nextLevel);
+    const points = levels[mergedLevel].score;
+
+    createMergeEffect(x, y, mergedLevel);
     createHeartBurst(x, y);
     createScorePopup(x, y - 35, points);
-    addShake(2 + nextLevel * 1.5);
-    playMergeSfx(nextLevel);
-    playTrishaSfx(nextLevel);       // ← UBAH: dulu nextLevel-1, sekarang nextLevel
-    updateMergeLog(nextLevel);
+    addShake(2 + mergedLevel * 1.5);
+    playMergeSfx(mergedLevel);
+    playTrishaSfx(mergedLevel);
+    updateMergeLog(mergedLevel);
     updateMobileEvoBar();
 
     score += points;
@@ -738,13 +913,20 @@ function processMerges() {
       bestEl.textContent = bestScore;
     }
 
-    saveGameState();
-
-    if (nextLevel === 6) {
-      setTimeout(() => { playTrishaSfx(6); }, 800);  // ← UBAH: dulu 600, sekarang 800
-      celebrationText = { text: "🌻 TRISHA MATAHARIKU 🌻", alpha: 1, timer: 0, hold: 180 };
+    /* V7 pertama kali tercipta */
+    if (mergedLevel === 6) {
+      setTimeout(() => { playTrishaSfx(6); }, 800);
+      celebrationText = {
+        text: "🌻 TRISHA MATAHARIKU 🌻",
+        alpha: 1,
+        timer: 0,
+        hold: 180,
+        fontSize: 32
+      };
       addShake(12);
     }
+
+    saveGameState();
 
     if (navigator.vibrate) navigator.vibrate(35);
   }
@@ -787,6 +969,13 @@ function endGame() {
   playGameOverSfx();
   addShake(10);
   finalScoreEl.textContent = `Score: ${score}`;
+
+  if (submitScoreBtn) {
+    submitScoreBtn.disabled = false;
+    submitScoreBtn.textContent = "Kirim Skor 🏆";
+  }
+  if (submitMsg) submitMsg.textContent = "";
+
   gameOverScreen.style.display = "flex";
 }
 
@@ -828,13 +1017,17 @@ function setupGame() {
   Runner.run(runner, engine);
 
   currentLevel = randomStartLevel();
+  nextLevel    = randomStartLevel();
   updateSideCurrent();
   updateMobileEvoBar();
   dropX = gameWidth / 2;
   aimLine.style.left = `${dropX}px`;
 
   Events.on(engine, "collisionStart", handleCollision);
-  Events.on(engine, "afterUpdate", () => { processMerges(); checkGameOver(); });
+  Events.on(engine, "afterUpdate", () => {
+    processMerges();
+    checkGameOver();
+  });
   Events.on(render, "afterRender", () => {
     drawDropGhost(); drawEffects(); drawParticles();
     drawScorePopups(); drawCelebration(); drawDangerZone(); updateShake();
@@ -849,12 +1042,13 @@ function startGame() {
   }
 
   initAudio();
+  playGanbattene();
 
   startScreen.style.display    = "none";
   gameOverScreen.style.display = "none";
   isPlaying  = true;
   isGameOver = false;
-  isPaused   = false;   // ← dipastikan false
+  isPaused   = false;
   canDrop    = true;
   dangerStartTime = null;
   highestReached  = 0;
@@ -891,10 +1085,13 @@ function restartGame() {
   syncDesktopPreview();
   updateMobileEvoBar();
   if (mobileMergeLog) mobileMergeLog.textContent = "🌻 Panggil Trisha sampai menjadi Matahariku";
+
+  refreshLeaderboard();
+  refreshPlayerCount();
 }
 
 /* ============================================================
-   INPUT — POINTER
+   INPUT
 ============================================================ */
 
 function setDropX(clientX) {
@@ -906,10 +1103,6 @@ function setDropX(clientX) {
 
 canvas.addEventListener("pointermove", (e) => setDropX(e.clientX));
 canvas.addEventListener("pointerdown", (e) => { setDropX(e.clientX); dropTrisha(); });
-
-/* ============================================================
-   INPUT — KEYBOARD
-============================================================ */
 
 document.addEventListener("keydown", (e) => {
   if (!isPlaying && !isGameOver && startScreen.style.display !== "none") {
@@ -936,6 +1129,7 @@ startBtn.addEventListener("click", () => preloadImages(startGame));
 restartBtn.addEventListener("click", restartGame);
 playAgainBtn.addEventListener("click", () => { gameOverScreen.style.display = "none"; startGame(); });
 if (sideResetBtn) sideResetBtn.addEventListener("click", restartGame);
+if (submitScoreBtn) submitScoreBtn.addEventListener("click", submitScoreToFirebase);
 
 function togglePause() {
   if (!runner || !engine || isGameOver) return;
@@ -996,7 +1190,7 @@ window.addEventListener("resize", () => {
 });
 
 /* ============================================================
-   VISIBILITY — FIX #4: restore runner saat tab kembali
+   VISIBILITY
 ============================================================ */
 
 let wasBgmPlaying  = false;
@@ -1010,11 +1204,9 @@ document.addEventListener("visibilitychange", () => {
     if (wasGamePlaying && runner && engine) Runner.stop(runner);
     saveGameState();
   } else {
-    /* ======== FIX #4a: Resume game saat tab kembali ======== */
     if (wasGamePlaying && runner && engine && !isPaused) {
       Runner.run(runner, engine);
     }
-    /* ======== FIX #4b: Resume BGM saat tab kembali ======== */
     if (wasBgmPlaying) {
       bgmAudio.play().catch(() => {});
     }

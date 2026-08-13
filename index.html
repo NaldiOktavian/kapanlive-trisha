@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Kapan Live Trisha? </title>
+  <title>Kapan Live Trisha?</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <main class="app">
@@ -36,59 +38,74 @@
       </div>
     </aside>
 
+    <!-- ===== MOBILE TOP: DROP PREVIEW ===== -->
+    <section class="mobile-top-panel">
+      <div class="mobile-top-row">
+        <div class="drop-preview">
+          <small>Drop</small>
+          <div class="drop-thumb">
+            <img id="mobileCurrentImg" src="assets/img/tr1.png" alt="">
+          </div>
+          <strong id="mobileCurrentName">V1</strong>
+        </div>
+        <span class="drop-arrow">▶</span>
+        <div class="drop-preview next">
+          <small>Next</small>
+          <div class="drop-thumb">
+            <img id="mobileNextImg" src="assets/img/tr2.png" alt="">
+          </div>
+          <strong id="mobileNextName">V2</strong>
+        </div>
+        <div class="mobile-controls">
+          <button id="mobilePauseBtn">Pause</button>
+          <button id="mobileMusicBtn">BGM</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== GAME CANVAS ===== -->
     <section class="game-wrap" id="gameWrap">
       <canvas id="game"></canvas>
-
       <div class="aim-line" id="aimLine"></div>
       <div class="warning-line"></div>
 
       <div class="start-screen" id="startScreen">
         <h1>TRISHA BLOOM 🌻</h1>
         <p>karena trisha ga kunjung-kunjung live, jadi aku bikin game ini supaya trisha live lagi.. sambil nunggu trisha nya live, coba mainin 🌻</p>
+
+        <!-- LEADERBOARD -->
+        <div class="leaderboard hidden" id="leaderboard">
+          <div class="lb-title">🏆 Hall of Fame</div>
+          <div class="lb-list" id="lbList">
+            <div class="lb-empty">Belum ada skor</div>
+          </div>
+          <div class="lb-player-count" id="lbPlayerCount">
+            👥 <span id="totalPlayers">0</span> players have joined
+          </div>
+        </div>
+
         <button id="startBtn">Mulai Main</button>
       </div>
 
       <div class="game-over" id="gameOver">
         <h1>Game Over</h1>
         <p id="finalScore">Score: 0</p>
+
+        <!-- SCORE SUBMIT -->
+        <div class="score-submit hidden" id="scoreSubmit">
+          <input type="text" id="playerName" placeholder="Nama kamu..." maxlength="15">
+          <button id="submitScoreBtn">Kirim Skor 🏆</button>
+          <span class="submit-msg" id="submitMsg"></span>
+        </div>
+
         <button id="playAgainBtn">Main Lagi</button>
       </div>
     </section>
 
-    <!-- ===== MOBILE BOTTOM PANEL (compact) ===== -->
-    <section class="mobile-bottom-panel">
-      <div class="mobile-bottom-row">
-        <div class="mobile-current">
-          <div class="mobile-current-thumb">
-            <img id="mobileCurrentImg" src="assets/img/tr1.png" alt="">
-          </div>
-          <strong id="mobileCurrentName">V1</strong>
-        </div>
-
-        <div class="mobile-evo-bar">
-          <div class="evo-dot active" data-mlevel="0"><img src="assets/img/tr1.png" alt=""><span>1</span></div>
-          <div class="evo-dot" data-mlevel="1"><img src="assets/img/tr2.png" alt=""><span>2</span></div>
-          <div class="evo-dot" data-mlevel="2"><img src="assets/img/tr3.png" alt=""><span>3</span></div>
-          <div class="evo-dot" data-mlevel="3"><img src="assets/img/tr4.png" alt=""><span>4</span></div>
-          <div class="evo-dot" data-mlevel="4"><img src="assets/img/tr5.png" alt=""><span>5</span></div>
-          <div class="evo-dot" data-mlevel="5"><img src="assets/img/tr6.png" alt=""><span>6</span></div>
-          <div class="evo-dot" data-mlevel="6"><img src="assets/img/tr7.png" alt=""><span>7</span></div>
-        </div>
-
-        <div class="mobile-controls">
-          <button id="mobilePauseBtn">Pause</button>
-          <button id="mobileMusicBtn">BGM</button>
-        </div>
-      </div>
-
-      <div class="mobile-merge-log" id="mobileMergeLog">
-        🌻 Panggil Trisha sampai menjadi Matahariku
-      </div>
-
-      <div class="mobile-caption">
-        semakin banyak poin, semakin besar peluang trisha bakalan live ✨
-      </div>
-    </section>
+    <!-- ===== MOBILE CAPTION ===== -->
+    <div class="mobile-caption">
+      semakin banyak poin, semakin besar peluang trisha bakalan live ✨
+    </div>
 
     <!-- ===== DESKTOP RIGHT PANEL ===== -->
     <aside class="side-panel right-panel">
